@@ -29,6 +29,11 @@ void IsoInfo::Print(int times) {
         std::cout << neutron_dest[i] << " ";
     } std::cout << std::endl;
 
+    std::cout << "  k: ";
+    for (int i = 0; i < times; i++) {
+        std::cout << neutron_prod[i]/neutron_dest[i] << " ";
+    } std::cout << std::endl;
+
     std::cout << "  BU: ";
     for (int i = 0; i < times; i++) {
         std::cout << BU[i] << " ";
@@ -331,10 +336,19 @@ float ReactorLiteInfo::CalcBU(float flux) {
     return burnup / core_mass_;
 }
 
+/*
+// Returns the total burnup/mass of the core by going through each batch
+float ReactorXInfo::CalcBU() {
+    unsigned const int regions = region.size();
+    float total_BU = 0;
+    for(unsigned int reg_i = 0; reg_i < regions; reg_i++) {
+        total_BU += region[reg_i].CalcBU() * region[reg_i].mass_;
+    }
+    return total_BU / core_mass_;
+}
 
 
-
-
+*/
 
 
 

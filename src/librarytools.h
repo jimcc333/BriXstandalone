@@ -19,6 +19,7 @@ void LibraryReader(string library_name, string library_path, LibInfo &library);
 void IsoBuilder(string library_path, IsoInfo &iso);
 float FluxFinder(string library_path);
 void StructReader(string library_path, float &struct_prod, float &struct_dest);
+/*
 void DACalc(ReactorLiteInfo &reactor_core);
 void BurnFuel(ReactorLiteInfo &reactor_core);
 void CriticalityBurn(ReactorLiteInfo &reactor_core);
@@ -31,5 +32,5 @@ float CoreCRCalc(ReactorLiteInfo &core);
 float AbsFluxCalc(ReactorLiteInfo &core, float abs_flux);
 void SpatialPhi(ReactorLiteInfo &core);
 float SteadyStateFluence(ReactorLiteInfo core, IsoInfo iso);
-
+*/
 #endif // LIBRARYTOOLS_H

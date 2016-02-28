@@ -94,6 +94,8 @@ void IsoBuilder(string library_path, IsoInfo &iso) {
     }
 }
 
+
+
 // Returns the library base flux value
 float FluxFinder(string library_path) {
 
@@ -199,6 +201,7 @@ void StructReader(string library_path, float &struct_prod, float &struct_dest) {
     struct_dest = tot_dest;
 }
 
+/*
 // Calculates fuel disadvantage factor
 void DACalc(ReactorLiteInfo &core){
 // DA = phi_thermal_Mod / phi_thermal_Fuel
@@ -267,7 +270,7 @@ void BurnFuel(ReactorLiteInfo &core) {
 }
 
 // Burns the fuel by advancing fluence based only on criticality
-void CriticalityBurn(ReactorLiteInfo &core) {
+void CriticalityBurn(ReactorXInfo &core) {
 // yes this IS old burnupcalc
     float kcore = 1.5;
     float kcore_prev;
@@ -311,17 +314,17 @@ void CriticalityBurn(ReactorLiteInfo &core) {
 }
 
 // Determines the flux calculation method and calls flux function accordingly
-void FluxCalc(ReactorLiteInfo &core) {
+void FluxCalc(ReactorXInfo &core) {
     unsigned int mode = core.flux_mode_;
 
-    // Override to mode=zero if any region exceeds library limit
+    // Override to mode=1 if any region exceeds library limit
     for(unsigned int reg_i = 0; reg_i < core.region.size(); reg_i++) {
         if(core.region[reg_i].fluence_ > core.region[reg_i].iso.fluence.back()) {
-            mode = 0;
+            mode = 1;
         }
     }
 
-    if(mode == 0) {
+    if(mode == 1) {
         // Simplest mode, all fluxes are 1
         for(unsigned int reg_i = 0; reg_i < core.region.size(); reg_i++){
             core.region[reg_i].rflux_ = 1;
@@ -329,7 +332,7 @@ void FluxCalc(ReactorLiteInfo &core) {
         }
 
     }
-    else if(mode == 1) {EqPowPhi(core);}
+    else if(mode == 0) {EqPowPhi(core);}
     else if(mode == 2) {InvProdPhi(core);}
     else if(mode == 3) {SpatialPhi(core);}
     else {
@@ -555,7 +558,7 @@ float CoreCRCalc(ReactorLiteInfo &core) {
 }
 
 // Determines the absolute flux (correct flux units) for the timestep
-float AbsFluxCalc(ReactorLiteInfo &core, float abs_flux) {
+float AbsFluxCalc(ReactorXInfo &core, float abs_flux) {
     //std::cout << "ABSFLUXCALC BEGIN" << std::endl;
     const int regions = core.regions_;
     const float power = core.thermal_pow_;          // [MWth]
@@ -606,238 +609,10 @@ float AbsFluxCalc(ReactorLiteInfo &core, float abs_flux) {
     return abs_flux2;
 }
 
-// Performs the spatial flux calculation
-void SpatialPhi(ReactorLiteInfo &core) {
-// Assumes an outermost water region
+*/
 
-    unsigned const int region = core.region.size();
-    float delta = core.spatial_.delta;
-    float R[region+1];          //radial thickness of each region
-    int N[region+1];            //number of mesh points in each region
-    int NC[region+1];           //cumulative N
-    int NTotal;                 //total number of mesh points
-    int iter;
-    float dd2[region+1];        // D/delta^2
-    float Sigma_a[region+1];    //mac. abs. cs of each region
-    float NuSigma_f[region+1];  //nu sigma f of each region
-    float Sigma_tr[region+1];   //mac. transport cs of each region
-    float D[region+1];          //diff coef. for each region
-    float LSquared[region+1];
-    float k = 1;
-    float k_prev = 0.9;
-    float prod, prod_prev;
-    float flux[region+1], maxflux=0;
-    float sum = 0;
 
-    // Set the radial thickness of each region
-    R[0] = std::sqrt(core.spatial_.fuel_area/region/3.141592);
-
-    for(unsigned int reg_i = 1; reg_i < region; reg_i++) {
-        R[reg_i] = sqrt(core.spatial_.fuel_area/region/3.141592*(reg_i+1));
-    }
-    R[region] = R[region-1] + core.spatial_.spatial_mod_thickness;
-
-    // Assign fuel cross sections
-    for(int reg_i = 0; reg_i < region; reg_i++) {
-
-        NuSigma_f[reg_i] = core.region[reg_i].CalcNuSigf();
-        Sigma_a[reg_i] = core.region[reg_i].CalcSiga();
-
-    /*    // comment out!
-        Sigma_a[0] = 0.0230;
-        Sigma_a[1] = 0.0246;
-        Sigma_a[2] = 0.0324;
-        NuSigma_f[0] = 0.0184;
-        NuSigma_f[1] = 0.0217;
-        NuSigma_f[2] = 0.0382;
-        /// till here!  */
-
-        Sigma_tr[reg_i] = core.spatial_.spatial_fuel_Sig_tr;
-        D[reg_i] = 1/(Sigma_tr[reg_i]*3.);
-        LSquared[reg_i] = D[reg_i]/Sigma_a[reg_i];
-    }
-
-    // Assign moderator cross sections
-    Sigma_a[region] = core.spatial_.spatial_mod_Sig_a;
-    Sigma_tr[region] = core.spatial_.spatial_mod_Sig_tr;
-    D[region] = 1/(Sigma_tr[region]*3.);
-    LSquared[region] = D[region]/Sigma_a[region];
-    NuSigma_f[region] = core.spatial_.spatial_mod_Sig_f;
-
-    // Populate dd2
-    for(int reg_i = 0; reg_i < region+1; reg_i++) {
-        dd2[reg_i] = D[reg_i]/delta/delta;
-    }
-
-    if((R[region-1]-R[region-2])/delta < 2.99) {
-        std::cout << "  Warning, too few discrete points in spatial flux calc." << std::endl;
-        unsigned int last = region;
-        if(region == 1){last = 2;}
-        delta = (R[last-1]-R[last-2])/3;
-        core.spatial_.delta = delta;
-        std::cout << "    Delta changed to " << delta << " [cm]." << std::endl;
-    }
-
-    // Populate N, number of mesh points in each region
-    N[0] = round(R[0]/delta);
-    NC[0] = N[0];
-    NTotal = N[0];
-
-    for(unsigned int reg_i = 1; reg_i < region+1; reg_i++) {
-        N[reg_i] = std::round((R[reg_i] - R[reg_i-1]) / delta);
-        if(N[reg_i] < 3) {
-            std::cout << "  Warning! Region " << reg_i+1 << " has too few discrete points ("
-                    << N[reg_i] << ").  - Increase fuel_area or mod_thickness." << std::endl;
-            EqPowPhi(core);
-            return;
-        }
-        NC[reg_i] = NC[reg_i-1] + N[reg_i];
-        NTotal += N[reg_i];
-    }
-    NC[region] += 1;
-    NTotal += 1;
 /*
-    Eigen::MatrixXf A(NTotal, NTotal);
-    Eigen::MatrixXf F(NTotal, 1);
-    Eigen::MatrixXf phi(NTotal, 1);
-    Eigen::MatrixXf phi_prev(NTotal, 1);
-    Eigen::MatrixXf S(NTotal, 1);
-    Eigen::MatrixXf S_prev(NTotal, 1);
-
-    A.setZero();
-    F.setZero();
-
-    int jprev = 0;
-    int j;
-
-    int r = 0; //region index
-    for(int i = 1; i < NTotal-1; i++) {
-        A(i, i-1) = (-1.)*dd2[r]*(2*i-1)/(2*i);
-        A(i,i) = dd2[r]*2. + Sigma_a[r];
-        A(i, i+1) = (-1.)*dd2[r]*(2*i+1)/(2*i);
-        if(i == NC[r]){
-            r += 1;
-        }
-        if(core.region[r].rflux_ < 1.1 && core.region[r].rflux_ > 0) {
-            phi_prev(i) = 1;//core.region[r].rflux; //uses last runs results if available
-        } else {
-            phi_prev(i) = 1;
-        }
-
-    }
-    A(0,0) = 1;
-    A(0,1) = -1;
-    A(NTotal-1,NTotal-1) = 1;
-    phi_prev(NTotal-1) = 0;
-
-    // Boundary conditions
-    for(r = 0; r < region; r++) {
-        A(NC[r],NC[r]-1) = D[r];
-        A(NC[r],NC[r]) = -D[r]-D[r+1];
-        A(NC[r],NC[r]+1) = D[r+1];
-    }
-
-    r = 0;
-    for(int i = 1; i < NTotal; i++) {
-        if(i != NC[r]) {
-            F(i) = NuSigma_f[r];
-        }
-        if(i == NC[r]) {r += 1;}
-        S_prev(i) = F(i)*phi_prev(i);
-    }
-
-    for(iter = 0; iter < 100; iter++) {
-        phi = A.colPivHouseholderQr().solve(S_prev)/k_prev;
-
-        if(!phi.allFinite()) {phi = phi_prev;}
-
-        S = F.array() * phi.array();
-
-        prod = (0.25)*3.141592*NuSigma_f[0]*phi(0)*delta*delta;
-        prod_prev = (0.25)*3.141592*NuSigma_f[0]*phi_prev(0)*delta*delta;
-        r = 0;
-
-        for(int i = 0; i < NTotal; i++) {
-            if(i == NC[r]){
-                prod += 3.141592*NuSigma_f[r]*phi(i)*(i-0.25)*delta*delta;
-                prod_prev += 3.141592*NuSigma_f[r]*phi_prev(i)*(i-0.25)*delta*delta;
-                r += 1;
-                prod += 3.141592*NuSigma_f[r]*phi(i)*(i-0.25)*delta*delta;
-                prod_prev += 3.141592*NuSigma_f[r]*phi_prev(i)*(i-0.25)*delta*delta;
-            } else {
-                prod += 2.*3.141592*NuSigma_f[r]*phi(i)*i*delta*delta;
-                prod_prev += 2.*3.141592*NuSigma_f[r]*phi_prev(i)*i*delta*delta;
-            }
-        }
-        ///TODO check this
-        if(abs((k_prev-k)/k) < 0.001 && iter > 3) {break;}
-        //cout << "prod: " << prod << "  prod_prev: " << prod_prev << "  k: " << prod/prod_prev << endl;
-        k = prod/prod_prev*k_prev;
-        phi_prev = phi;
-        k_prev = k;
-        S_prev = S;
-    }
-
-    // Find area weighted average phi per batch
-    r = 0;
-    flux[0] = 0;
-    for(int i = 0; i < NTotal; i++) {
-        if(phi(i) < 0) {phi(i) = 0;}
-
-        flux[r] += phi(i)*(2*(i+1)-1);
-        sum += (2*(i+1)-1);
-
-        // uses some trickery to switch between regions
-        if(i == NC[r] || i == NTotal-1) {
-            // divide by total area
-            flux[r] /= sum;
-
-            // reset sum and flux of next region
-            sum = 0;
-            r += 1;
-            flux[r] = 0;
-        }
-    }
-    for(r = 0; r < region+1; r++) {
-        if(flux[r] > maxflux){
-            maxflux = flux[r];
-        }
-    }
-
-    //cout << " Iterations:" << iter << " k:" << k << endl;
-    //cout << "--- A ---" << endl << A << endl << " --- ----" << endl;
-    //cout << "---phi---" << endl<< phi << endl << "--------" << endl;
-
-    //find area weighted average phi per batch
-    r = 0;
-    flux[0] = 0;
-    for(int i = 0; i < NTotal; i++) {
-        flux[r] += phi(i)*(2*(i+1)-1);
-        sum += (2*(i+1)-1);
-
-        if(i == NC[r] || i == NTotal-1) {
-            flux[r] /= sum;
-            sum = 0;
-            r += 1;
-            flux[r] = 0;
-        }
-    }
-    for(r = 0; r < region+1; r++) {
-        if(flux[r] > maxflux){
-            maxflux = flux[r];
-        }
-    }
-
-    // Normalize the fluxes
-    for(r = 0; r < region+1; r++) {
-        flux[r] /= maxflux;
-    }
-
-    for(int reg_i = 0; reg_i < region; reg_i++) {
-        core.region[reg_i].rflux_ = flux[reg_i];
-    }*/
-}
-
 // Returns the steady state fluence of the core by refueling with IsoInfo iso
 float SteadyStateFluence(ReactorLiteInfo core, IsoInfo iso) {
     // Note that the ReactorLiteInfo object is a copy here
@@ -874,7 +649,7 @@ float SteadyStateFluence(ReactorLiteInfo core, IsoInfo iso) {
 
     return fluence2;
 }
-
+*/
 
 
 

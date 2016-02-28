@@ -116,6 +116,11 @@ public:
     float CalcSiga();               // Return the macroscopic absorption cross section [cm-1]
 };
 
+class TypeInfo {
+public:
+    std::vector<RegionInfo> batch; // number of batches for this type of fuel
+};
+
 class ReactorLiteInfo {
 public:
     // Initialized during startup
@@ -194,7 +199,7 @@ public:
     // Regions are populated based on reactor parameters
     unsigned int regions_;  // calculated total number of regions
     float core_mass_;       // Total mass of all fuel in [kg]
-    std::vector<RegionInfo> region;  // region[0] is oldest
+    std::vector<TypeInfo> type;  // fuel types, such as UO2 and MOX
 
     void PrintRegionIsos();
     void PrintFluences();
