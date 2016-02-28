@@ -52,7 +52,10 @@ void IsoBuilder(string library_path, IsoInfo &iso) {
         iss >> buffer;
         if (i >= 4){
             Daughter daughter;
-            daughter.name = pyne::nucname::zzaaam(buffer);
+            ///changed here without knowing what it actually will do, from this:
+            //daughter.name = pyne::nucname::zzaaam(buffer);
+            /// to this:
+            daughter.string_name = buffer; // (also had to change add daughter.string_name)
             while (iss >> value){
                 daughter.mass.push_back(value);
             }

@@ -10,6 +10,7 @@
 
 struct Daughter {
     unsigned int name;
+    string string_name;
     std::vector<float> mass;
     float fraction;
 };
