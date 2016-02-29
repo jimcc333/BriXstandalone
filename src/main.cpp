@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     regionlwr.BuildIso(lwrlib);
 
     lwrtype.batch.assign(4, regionlwr);
-
+/*
     TypeInfo moxtype;
     moxtype.mass = 64;
 
@@ -59,14 +59,14 @@ int main(int argc, char* argv[]) {
     regionmox.BuildIso(lwrlib);
 
     moxtype.batch.assign(4, regionmox);
-
+*/
     ReactorXInfo reactor;
     reactor.type.push_back(lwrtype);
-    reactor.type.push_back(moxtype);
+    //reactor.type.push_back(moxtype);
     reactor.pnl = 0.95;
     reactor.thermal_pow_ = 2000; // bad guess
-    reactor.core_mass_ = lwrtype.mass + moxtype.mass;
-    reactor.abs_flux_tol_ = 0.001;
+    reactor.core_mass_ = lwrtype.mass ;//+ moxtype.mass;
+    reactor.abs_flux_tol_ = 0.01;
     reactor.base_flux_ = 3E14;
     reactor.DA_mode_ = 0;
     reactor.fluence_timestep_ = 50;
