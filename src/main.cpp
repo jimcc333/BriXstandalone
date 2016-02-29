@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
     lwrtype.batch.assign(4, regionlwr);
 
     TypeInfo moxtype;
-    moxtype.mass = 84;
+    moxtype.mass = 84; // watchout
 
     RegionInfo regionmox;
     regionmox.fractions[922350] = 0.00654120;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
 
     ReactorXInfo reactor;
     reactor.type.push_back(lwrtype);
-    reactor.type.push_back(moxtype);
+    reactor.type.push_back(lwrtype);
     reactor.pnl = 0.8215;
     reactor.thermal_pow_ = 41;
     reactor.core_mass_ = lwrtype.mass + moxtype.mass;
@@ -85,9 +85,9 @@ int main(int argc, char* argv[]) {
 
 
     /// Run steady state calculations
-
-    for(int cycle = 0; cycle < 7; cycle++) {
-
+/*
+    for(int cycle = 0; cycle < 3; cycle++) {
+        reactor.PrintFluences();
         CriticalityBurn(reactor);
         //reactor.PrintFluences();
         for(int type_i = 0; type_i < reactor.type.size(); type_i++) {
@@ -96,8 +96,27 @@ int main(int argc, char* argv[]) {
             }
             reactor.type[type_i].batch.back().fluence_ = 0;
         }
-        //reactor.PrintFluences();
     }
+*/
+
+    reactor.type[1].batch[3] = regionmox;
+    reactor.type[1].mass = 84;
+
+    for(int cycle = 0; cycle < 4; cycle++) {
+        cout << "BURN" << endl;
+        CriticalityBurn(reactor);
+
+        reactor.type[0].batch[0].fluence_ = reactor.type[0].batch[1].fluence_;
+        reactor.type[0].batch[1].fluence_ = reactor.type[0].batch[2].fluence_;
+        reactor.type[0].batch[2].fluence_ = reactor.type[0].batch[3].fluence_;
+        reactor.type[0].batch[3].fluence_ = 0;
+
+        reactor.type[1].batch[0] = reactor.type[1].batch[1];
+        reactor.type[1].batch[1] = reactor.type[1].batch[2];
+        reactor.type[1].batch[2] = reactor.type[1].batch[3];
+        reactor.type[1].batch[3] = regionmox;
+    }
+
 
     cout << " UO2 burnup: " << reactor.type[0].batch[0].CalcBU() << endl;
     cout << " MOX burnup: " << reactor.type[1].batch[0].CalcBU() << endl;
