@@ -9,7 +9,7 @@
 
 
 struct Daughter {
-    unsigned int name;
+    //unsigned int name;
     string string_name;
     std::vector<float> mass;
     float fraction;
@@ -94,7 +94,7 @@ public:
 
     IsoInfo iso;             // Collapsed, isoinfo for region
     std::map<int,float> fractions; // Name and fraction of each isotope for iso building
-    std::map<int,float> comp; // Composition of the region
+    std::map<string,float> comp; // Composition of the region
 
     unsigned int location_;  // Radial location of region, 1:center
 
@@ -202,6 +202,8 @@ public:
     void UpdateComp();          // Updates the composition of isotopes in all regions
     float CalcBU();             // Calculates the burnup of the core
     float CalcBU(float flux);   // Calculates the burnup if reactor at given flux
+    float AssemblyBU(int assembly);
+    float AssemblyBU(int assembly, float fluence); // Calculates the burnup of the assembly, 0 is oldest
 
 };
 

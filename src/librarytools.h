@@ -21,11 +21,11 @@ float FluxFinder(string library_path);
 void StructReader(string library_path, float &struct_prod, float &struct_dest);
 void CriticalityBurn(ReactorXInfo &reactor_core);
 float kCalc(ReactorXInfo &reactor_core);
+void EqPowPhi(ReactorXInfo &reactor_core);
 float AbsFluxCalc(ReactorXInfo &core, float abs_flux, int regions);
 /*
 void DACalc(ReactorLiteInfo &reactor_core);
 void FluxCalc(ReactorLiteInfo &reactor_core);
-void EqPowPhi(ReactorLiteInfo &reactor_core);
 void InvProdPhi(ReactorLiteInfo &core);
 float RegionCRCalc(ReactorLiteInfo &core, unsigned const int reg_i);
 float CoreCRCalc(ReactorLiteInfo &core);

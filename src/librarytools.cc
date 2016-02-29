@@ -22,6 +22,7 @@ void LibraryReader(string library_name, string library_path, LibInfo &library) {
 
         iss >> iso_name;
         iso.name = atoi(iso_name.c_str()); // Adds name to iso
+
         iso.fraction = 0; // Default fraction
 
         IsoBuilder(library_path, iso);
@@ -277,16 +278,23 @@ void CriticalityBurn(ReactorXInfo &core) {
     float abs_flux = core.base_flux_;
     unsigned const int batches = core.batches;
 
-    cout << "total batches: " << batches << endl;
+    core.base_flux_ = AbsFluxCalc(core, abs_flux, batches);
 
     while(kcore > 1) {
         kcore_prev = kcore; // Save previous k for final interpolation
         //FluxCalc(core); // Update relative flux of regions
+        EqPowPhi(core);
+
+        for(int i = 0; i < core.type[0].batch.size(); i++) {
+            ///TODO this will change!!! just to see if it works, for now
+            core.type[1].batch[i].rflux_ = core.type[0].batch[i].rflux_ * 0.90;
+        }
 
         // Calculate DA
         //    DACalc(core);
 
         abs_flux = AbsFluxCalc(core, abs_flux, batches);
+        core.base_flux_ = abs_flux;
         //std::cout << "Absolute flux: " << abs_flux << " k: " << kcore << std::endl;
 
         // Update fluences
@@ -368,53 +376,68 @@ float kCalc(ReactorXInfo &core) {
     return core.pnl * prod_tot / dest_tot;
 }
 
-/*
+
 // Calculates relative fluxes based on the equal power sharing assumption (1)
-void EqPowPhi(ReactorLiteInfo &core) {
+void EqPowPhi(ReactorXInfo &core) {
+    /// works for two fuel types with equal number of batches
+    ///   -> its assuming each assembly has two types of fuel
+    ///   - saves the calculated fluxes to fuel type [0]
     // Operates on: Regions of equal power have equal burnup
     // this function updates relative fluxes instead of directly calculating burnup
 
     float max_fluence = core.fluence_timestep_ * core.base_flux_;
     float bu_old, bu_next, delta_bu, batch_bu;
     float batch_fluence;
-    unsigned const int N = core.region.size();
+    unsigned const int N = core.type[0].batch.size();
     float max_flux = -1;
     float min_flux = 10;
     unsigned int jk;
-    core.region[0].rflux_ = 1;
+    core.type[0].batch[0].rflux_ = 1;
+    core.type[1].batch[0].rflux_ = 1;
 
-    // Find the current burnup of the oldest batch
-    bu_old = core.region[0].CalcBU();
+    // Find the current burnup of the oldest assembly
+    bu_old = core.AssemblyBU(0);
 
     // Find the burnup for next step
     // This assumes oldest batch will have the least burnup for a given change in fluence
-    bu_next = core.region[0].CalcBU(core.region[0].fluence_ + max_fluence);
+    bu_next = core.AssemblyBU(0, core.type[0].batch[0].fluence_ + max_fluence);
     delta_bu = bu_next - bu_old;
 
     for(int unsigned i = 0; i < N; i++) {
-        batch_bu = core.region[i].CalcBU();
+        batch_bu = core.AssemblyBU(i);
+
         // find the discrete points before and after batch bu
-        for(jk = 0; core.region[i].iso.BU[jk] < batch_bu + delta_bu; jk++){
+        for(jk = 0; core.type[0].batch[i].iso.BU[jk] < batch_bu + delta_bu; jk++){
         }
 
-        batch_fluence = Interpolate(core.region[i].iso.fluence[jk-1], core.region[i].iso.fluence[jk],
-                                    core.region[i].iso.BU[jk-1], core.region[i].iso.BU[jk], batch_bu + delta_bu);
+        batch_fluence = Interpolate(core.type[0].batch[i].iso.fluence[jk-1],
+                                    core.type[0].batch[i].iso.fluence[jk],
+                                    core.AssemblyBU(i, core.type[0].batch[i].iso.fluence[jk-1]),
+                                    core.AssemblyBU(i, core.type[0].batch[i].iso.fluence[jk]),
+                                    batch_bu + delta_bu);
 
-        core.region[i].rflux_ = (batch_fluence - core.region[i].fluence_)/(max_fluence);
-        if(core.region[i].rflux_ > max_flux){max_flux = core.region[i].rflux_;}
-        if(core.region[i].rflux_ < 0){core.region[i].rflux_ = 0;}
-        if(core.region[i].rflux_ < min_flux){min_flux = core.region[i].rflux_;}
+        core.type[0].batch[i].rflux_ = (batch_fluence - core.type[0].batch[i].fluence_)/(max_fluence);
+
+        if(core.type[0].batch[i].rflux_ > max_flux){max_flux = core.type[0].batch[i].rflux_;}
+        if(core.type[0].batch[i].rflux_ < 0){core.type[0].batch[i].rflux_ = 0;}
+        if(core.type[0].batch[i].rflux_ < min_flux){min_flux = core.type[0].batch[i].rflux_;}
     }
 
     for(int unsigned i = 0; i < N; i++) {
-        if(core.region[i].rflux_ == 0) {
-            core.region[i].rflux_ = min_flux/max_flux;
+        if(core.type[0].batch[i].rflux_ == 0) {
+            core.type[0].batch[i].rflux_ = min_flux/max_flux;
         } else {
-            core.region[i].rflux_ = core.region[i].rflux_ / max_flux;
+            core.type[0].batch[i].rflux_ = core.type[0].batch[i].rflux_ / max_flux;
         }
     }
-}
 
+    //cout << "EqPow fluxes: " << endl;
+    for(int unsigned i = 0; i < N; i++) {
+        //cout << "               " << core.type[0].batch[i].rflux_ << endl;
+    }
+
+}
+/*
 // Calculates relative fluxes based on the inverse of neutron production assumption (2)
 void InvProdPhi(ReactorLiteInfo &core) {
 // Updates the rflux of each region in core.region

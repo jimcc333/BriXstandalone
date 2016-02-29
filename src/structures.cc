@@ -91,7 +91,7 @@ void RegionInfo::BuildIso(LibInfo library) {
                 for (int i = 0; i < library.all_iso[lib_i].iso_vector.size(); i++) {
                     bool iso_check = true;
                     for (int j = 0; j < iso.iso_vector.size(); j++) {
-                        if (library.all_iso[lib_i].iso_vector[i].name == iso.iso_vector[j].name) {
+                        if (library.all_iso[lib_i].iso_vector[i].string_name == iso.iso_vector[j].string_name) {
                             for (int k = 0; k < iso.iso_vector[j].mass.size(); k++) {
                                 for (int ii = 0; ii < library.all_iso[lib_i].iso_vector[i].mass.size(); ii ++) {
                                     if ( k ==ii ) {
@@ -147,7 +147,7 @@ void RegionInfo::UpdateComp() {
     const double slope = (fluence_ - iso.fluence[ii-1]) / (iso.fluence[ii] - iso.fluence[ii-1]);
 
     for(int iso_i = 0; iso_i < iso.iso_vector.size(); iso_i++) {
-        comp[iso.iso_vector[iso_i].name] = (iso.iso_vector[iso_i].mass[ii-1] +
+        comp[iso.iso_vector[iso_i].string_name] = (iso.iso_vector[iso_i].mass[ii-1] +
                 (iso.iso_vector[iso_i].mass[ii] - iso.iso_vector[iso_i].mass[ii-1]) * slope) / 1000;
     }
 }
@@ -343,6 +343,18 @@ float ReactorXInfo::CalcBU() {
     return CalcBU(0);
 }
 
+void ReactorXInfo::PrintFluences() {
+    cout << " ---Core fluences---" << endl;
+    for(int type_i = 0; type_i < type.size(); type_i++) {
+        cout << " Type " << type_i+1 << ": ";
+        for(int batch_i = 0; batch_i < type[type_i].batch.size(); batch_i++) {
+            cout << type[type_i].batch[batch_i].fluence_ << " ";
+        } cout << endl;
+    }
+
+}
+
+
 float ReactorXInfo::CalcBU(float flux) {
     float total_BU = 0;
     float fluence;
@@ -360,7 +372,16 @@ float ReactorXInfo::CalcBU(float flux) {
     return total_BU;
 }
 
+float ReactorXInfo::AssemblyBU(int assembly) {
+    return AssemblyBU(assembly, type[0].batch[assembly].fluence_);
+}
 
+float ReactorXInfo::AssemblyBU(int assembly, float fluence) {
+
+    return (type[0].batch[assembly].CalcBU(fluence) * type[0].mass
+            + type[1].batch[assembly].CalcBU(fluence) * type[1].mass)
+                / core_mass_;
+}
 
 
 
