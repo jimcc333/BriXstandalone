@@ -339,14 +339,8 @@ float ReactorLiteInfo::CalcBU(float flux) {
 
 // Returns the total burnup/mass of the core by going through each batch
 float ReactorXInfo::CalcBU() {
-    float total_BU = 0;
-    for(int type_i = 0; type_i < type.size(); type_i++) {
-        for(int batch_i = 0; batch_i < type[type_i].batch.size(); batch_i++) {
-            total_BU += type[type_i].batch[batch_i].CalcBU();
-        }
-        total_BU = total_BU * type[type_i].mass / core_mass_;
-    }
-    return total_BU;
+
+    return CalcBU(0);
 }
 
 float ReactorXInfo::CalcBU(float flux) {
@@ -361,7 +355,7 @@ float ReactorXInfo::CalcBU(float flux) {
             //cout << "BUcalc; fluence:" << fluence << " calcBU(fluence):" << type[type_i].batch[batch_i].CalcBU(fluence) << endl;
             //cout << "   batchfluence:" << type[type_i].batch[batch_i].fluence_ << " rflux:" << type[type_i].batch[batch_i].rflux_ << " fluencetimestep:" << fluence_timestep_ << " flux:" << flux << endl;
         }
-        total_BU = total_BU * type[type_i].mass / core_mass_;
+        total_BU = total_BU * type[type_i].mass / core_mass_ / type[type_i].batch.size();
     }
     return total_BU;
 }

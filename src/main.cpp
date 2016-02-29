@@ -95,6 +95,7 @@ int main(int argc, char* argv[]) {
     }
 
     cout << " discharge burnup: " << reactor.type[0].batch[0].CalcBU() << endl;
+    cout << " core burnup: " << reactor.CalcBU() << endl;
     /// Run steady state calculations
 
     /// Output results
