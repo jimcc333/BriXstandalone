@@ -35,11 +35,13 @@ int main(int argc, char* argv[]) {
 
     // Build reactor object and fuel isos
     TypeInfo lwrtype;
-    lwrtype.mass = 180;
+    lwrtype.mass = 112000;
 
     RegionInfo regionlwr;
-    regionlwr.fractions[922350] = 0.0530;
-    regionlwr.fractions[922380] = 0.9470;
+    //regionlwr.fractions[922350] = 0.0530;
+    //regionlwr.fractions[922380] = 0.9470;
+    regionlwr.fractions[922350] = 0.036;
+    regionlwr.fractions[922380] = 0.964;
     regionlwr.BuildIso(lwrlib);
 
     lwrtype.batch.assign(4, regionlwr);
@@ -63,11 +65,11 @@ int main(int argc, char* argv[]) {
     ReactorXInfo reactor;
     reactor.type.push_back(lwrtype);
     //reactor.type.push_back(moxtype);
-    reactor.pnl = 0.95;
-    reactor.thermal_pow_ = 2000; // bad guess
+    reactor.pnl = 0.97;
+    reactor.thermal_pow_ = 4170; // bad guess
     reactor.core_mass_ = lwrtype.mass ;//+ moxtype.mass;
     reactor.abs_flux_tol_ = 0.01;
-    reactor.base_flux_ = 3E14;
+    reactor.base_flux_ = 3E18;
     reactor.DA_mode_ = 0;
     reactor.fluence_timestep_ = 50;
     reactor.flux_mode_ = 1;
@@ -79,8 +81,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    CriticalityBurn(reactor);
 
+    for(int cycle = 0; cycle < 20; cycle++) {
+
+        CriticalityBurn(reactor);
+
+        for(int type_i = 0; type_i < reactor.type.size(); type_i++) {
+            for(int batch_i = 0; batch_i < reactor.type[type_i].batch.size() - 1; batch_i++) {
+                reactor.type[type_i].batch[batch_i].fluence_ = reactor.type[type_i].batch[batch_i+1].fluence_;
+            }
+            reactor.type[type_i].batch.back().fluence_ = 0;
+        }
+    }
+
+    cout << " discharge burnup: " << reactor.type[0].batch[0].CalcBU() << endl;
     /// Run steady state calculations
 
     /// Output results

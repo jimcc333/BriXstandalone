@@ -358,6 +358,8 @@ float ReactorXInfo::CalcBU(float flux) {
             fluence = type[type_i].batch[batch_i].fluence_ +
                       type[type_i].batch[batch_i].rflux_ * flux * fluence_timestep_;
             total_BU += type[type_i].batch[batch_i].CalcBU(fluence);
+            //cout << "BUcalc; fluence:" << fluence << " calcBU(fluence):" << type[type_i].batch[batch_i].CalcBU(fluence) << endl;
+            //cout << "   batchfluence:" << type[type_i].batch[batch_i].fluence_ << " rflux:" << type[type_i].batch[batch_i].rflux_ << " fluencetimestep:" << fluence_timestep_ << " flux:" << flux << endl;
         }
         total_BU = total_BU * type[type_i].mass / core_mass_;
     }

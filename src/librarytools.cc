@@ -287,7 +287,7 @@ void CriticalityBurn(ReactorXInfo &core) {
         //    DACalc(core);
 
         abs_flux = AbsFluxCalc(core, abs_flux, batches);
-        //std::cout << "Absolute flux: " << abs_flux << std::endl;
+        //std::cout << "Absolute flux: " << abs_flux << " k: " << kcore << std::endl;
 
         // Update fluences
         for(int type_i = 0; type_i < core.type.size(); type_i++) {
@@ -573,7 +573,7 @@ float AbsFluxCalc(ReactorXInfo &core, float abs_flux, int regions) {
 
     const float power = core.thermal_pow_;          // [MWth]
     const float mass = core.core_mass_;             // [kg]
-    const float timestep = core.fluence_timestep_/86400.;  // [day]
+    const float timestep = core.fluence_timestep_;  // [day]
     const float BU_prev = core.CalcBU();            // [MWd/kgIHM]
     float BU_next, delta_BU;
     float fluence;
@@ -584,6 +584,9 @@ float AbsFluxCalc(ReactorXInfo &core, float abs_flux, int regions) {
     delta_BU = core.CalcBU(abs_flux1) - BU_prev;
     step_power1 = delta_BU * mass / timestep;
 
+    //cout << "delta BU: " << delta_BU << " BU1: " << core.CalcBU(abs_flux1) << " BU2: " << BU_prev << endl;
+    //cout << "abs flux1: " << abs_flux1 << endl;
+
     // Quickly scale up flux if abs_flux was too far off
     while(step_power1 < power && times < 20) {
         abs_flux1 *= 1.5;
@@ -593,19 +596,25 @@ float AbsFluxCalc(ReactorXInfo &core, float abs_flux, int regions) {
 
         times++;
     }
+
     times = 0;
     abs_flux2 = abs_flux1 * 0.9;
 
+
     while(times < 20) {
         // Determine the timestep power implied by the current abs_flux
+    //cout << "abs flux2: " << abs_flux2 << endl;
         delta_BU = core.CalcBU(abs_flux2) - BU_prev;
+        //cout << " delta BU: " << delta_BU << " BUprev: " << BU_prev << endl;
         step_power2 = delta_BU * mass / timestep;   // [MWd/kgIHM] * [kgIHM] / [day]
 
         if(std::abs(step_power2 - power)/power < core.abs_flux_tol_) {
             return abs_flux2;
         }
 
+        //cout << "f2:" << abs_flux2 << " steppow2:" << step_power2 << " f1:" << abs_flux1 << " steppow1:" << step_power1 << endl;
         temp_flux = abs_flux2 + (power - step_power2)*(abs_flux2-abs_flux1)/(step_power2-step_power1);
+        //cout << "temp flux:" << temp_flux << endl;
         if(temp_flux < 0) {temp_flux = 0;}
 
         step_power1 = step_power2;

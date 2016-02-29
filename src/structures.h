@@ -119,7 +119,7 @@ public:
 class TypeInfo {
 public:
     float mass;
-    std::vector<RegionInfo> batch; // number of batches for this type of fuel
+    std::vector<RegionInfo> batch; // number of batches for this type of fuel, [0] is oldest
 };
 
 class ReactorLiteInfo {
