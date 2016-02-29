@@ -268,31 +268,33 @@ void BurnFuel(ReactorLiteInfo &core) {
     }
 
 }
+*/
 
 // Burns the fuel by advancing fluence based only on criticality
 void CriticalityBurn(ReactorXInfo &core) {
-// yes this IS old burnupcalc
     float kcore = 1.5;
     float kcore_prev;
-    unsigned const int regions = core.region.size();
     float abs_flux = core.base_flux_;
+    unsigned const int batches = core.batches;
+
+    cout << "total batches: " << batches << endl;
 
     while(kcore > 1) {
         kcore_prev = kcore; // Save previous k for final interpolation
-        FluxCalc(core); // Update relative flux of regions
+        //FluxCalc(core); // Update relative flux of regions
 
         // Calculate DA
-        if(core.DA_mode_ == 1) {
-            DACalc(core);
-        }
+        //    DACalc(core);
 
-        abs_flux = AbsFluxCalc(core, abs_flux);
+        abs_flux = AbsFluxCalc(core, abs_flux, batches);
         //std::cout << "Absolute flux: " << abs_flux << std::endl;
 
         // Update fluences
-        for(unsigned int reg_i = 0; reg_i < regions; reg_i++) {
-            core.region[reg_i].fluence_ += core.region[reg_i].rflux_
-                    * core.fluence_timestep_ * abs_flux;
+        for(int type_i = 0; type_i < core.type.size(); type_i++) {
+            for(int batch_i = 0; batch_i < core.type[type_i].batch.size(); batch_i++) {
+                core.type[type_i].batch[batch_i].fluence_ += core.type[type_i].batch[batch_i].rflux_
+                                                             * core.fluence_timestep_ * abs_flux;
+            }
         }
 
         // Calculate k
@@ -304,15 +306,19 @@ void CriticalityBurn(ReactorXInfo &core) {
     core.base_flux_ = abs_flux;
 
     // Find the discharge fluences
-    for(unsigned int reg_i = 0; reg_i < regions; reg_i++) {
+    for(int type_i = 0; type_i < core.type.size(); type_i++) {
+        for(int batch_i = 0; batch_i < core.type[type_i].batch.size(); batch_i++) {
         ///The subtraction here is meh
-        core.region[reg_i].fluence_ = Interpolate((core.region[reg_i].fluence_ -
-                   core.region[reg_i].rflux_ * core.fluence_timestep_ * abs_flux),
-                   core.region[reg_i].fluence_, kcore_prev, kcore, 1);
+            core.type[type_i].batch[batch_i].fluence_ = Interpolate(
+                                                                core.type[type_i].batch[batch_i].fluence_ -
+                                                                core.type[type_i].batch[batch_i].rflux_
+                                                                * core.fluence_timestep_ * abs_flux,
+                                                                core.type[type_i].batch[batch_i].fluence_,
+                                                                kcore_prev, kcore, 1);
+        }
     }
-
 }
-
+/*
 // Determines the flux calculation method and calls flux function accordingly
 void FluxCalc(ReactorXInfo &core) {
     unsigned int mode = core.flux_mode_;
@@ -339,26 +345,30 @@ void FluxCalc(ReactorXInfo &core) {
         std::cout << "  Error in flux mode input for ReactorLite" << std::endl;
     }
 }
+*/
 
 // Calculates the k-value of the core
-float kCalc(ReactorLiteInfo &core) {
-    unsigned const int regions = core.region.size();
+float kCalc(ReactorXInfo &core) {
+    unsigned const int batches = core.batches;
     float prod_tot = 0;
     float dest_tot = 0;
 
-    for(unsigned int reg_i = 0; reg_i < regions; reg_i++) {
-        prod_tot += ( (core.region[reg_i].CalcProd() + core.struct_prod_ * core.region[reg_i].DA)
-                    * core.region[reg_i].rflux_ * core.region[reg_i].mass_);
+    for(int type_i = 0; type_i < core.type.size(); type_i++) {
+        for(int batch_i = 0; batch_i < core.type[type_i].batch.size(); batch_i++) {
+            prod_tot += core.type[type_i].batch[batch_i].CalcProd()
+                        * core.type[type_i].batch[batch_i].rflux_ * core.type[type_i].mass;
 
-        dest_tot += ( (core.region[reg_i].CalcDest() +
-                       core.struct_dest_ * core.region[reg_i].DA)
-                    * core.region[reg_i].rflux_) * core.region[reg_i].mass_;
+            dest_tot += core.type[type_i].batch[batch_i].CalcDest()
+                        * core.type[type_i].batch[batch_i].rflux_ * core.type[type_i].mass;
+        }
     }
+
 
     if(dest_tot <= 0) {return 0;}
     return core.pnl * prod_tot / dest_tot;
 }
 
+/*
 // Calculates relative fluxes based on the equal power sharing assumption (1)
 void EqPowPhi(ReactorLiteInfo &core) {
     // Operates on: Regions of equal power have equal burnup
@@ -556,13 +566,13 @@ float CoreCRCalc(ReactorLiteInfo &core) {
 
     return CR;
 }
-
+*/
 // Determines the absolute flux (correct flux units) for the timestep
-float AbsFluxCalc(ReactorXInfo &core, float abs_flux) {
+float AbsFluxCalc(ReactorXInfo &core, float abs_flux, int regions) {
     //std::cout << "ABSFLUXCALC BEGIN" << std::endl;
-    const int regions = core.regions_;
+
     const float power = core.thermal_pow_;          // [MWth]
-    const float mass = core.core_mass_;
+    const float mass = core.core_mass_;             // [kg]
     const float timestep = core.fluence_timestep_/86400.;  // [day]
     const float BU_prev = core.CalcBU();            // [MWd/kgIHM]
     float BU_next, delta_BU;
@@ -609,7 +619,7 @@ float AbsFluxCalc(ReactorXInfo &core, float abs_flux) {
     return abs_flux2;
 }
 
-*/
+
 
 
 /*

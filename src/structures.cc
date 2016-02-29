@@ -336,19 +336,34 @@ float ReactorLiteInfo::CalcBU(float flux) {
     return burnup / core_mass_;
 }
 
-/*
+
 // Returns the total burnup/mass of the core by going through each batch
 float ReactorXInfo::CalcBU() {
-    unsigned const int regions = region.size();
     float total_BU = 0;
-    for(unsigned int reg_i = 0; reg_i < regions; reg_i++) {
-        total_BU += region[reg_i].CalcBU() * region[reg_i].mass_;
+    for(int type_i = 0; type_i < type.size(); type_i++) {
+        for(int batch_i = 0; batch_i < type[type_i].batch.size(); batch_i++) {
+            total_BU += type[type_i].batch[batch_i].CalcBU();
+        }
+        total_BU = total_BU * type[type_i].mass / core_mass_;
     }
-    return total_BU / core_mass_;
+    return total_BU;
 }
 
+float ReactorXInfo::CalcBU(float flux) {
+    float total_BU = 0;
+    float fluence;
 
-*/
+    for(int type_i = 0; type_i < type.size(); type_i++) {
+        for(int batch_i = 0; batch_i < type[type_i].batch.size(); batch_i++) {
+            fluence = type[type_i].batch[batch_i].fluence_ +
+                      type[type_i].batch[batch_i].rflux_ * flux * fluence_timestep_;
+            total_BU += type[type_i].batch[batch_i].CalcBU(fluence);
+        }
+        total_BU = total_BU * type[type_i].mass / core_mass_;
+    }
+    return total_BU;
+}
+
 
 
 

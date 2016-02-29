@@ -118,6 +118,7 @@ public:
 
 class TypeInfo {
 public:
+    float mass;
     std::vector<RegionInfo> batch; // number of batches for this type of fuel
 };
 
@@ -165,14 +166,6 @@ public:
     float CalcBU(float flux);   // Calculates the burnup if reactor at given flux
 };
 
-// A fuel type is based on one library
-class FuelType {
-    unsigned int f_groups_; // Fuel groups of this fuel type
-    LibInfo library_;       // The library of the fuel group
-
-
-};
-
 class ReactorXInfo {
 
 public:
@@ -180,7 +173,7 @@ public:
     float thermal_pow_;     // Reactor thermal power [MWth]
     //float target_BU_;       // Target burnup in [MWd/kgIHM]
     //float target_CR_;       // Target conversion ratio
-    //float pnl;              // Nonleakage probability
+    float pnl;              // Nonleakage probability
     float fluence_timestep_;// Fluence propagation time step [second]
     float base_flux_;       // Library base flux or last cycle flux
     std::vector<int> CR_fissile_; // List of fissile isotopes for CR calc
@@ -198,6 +191,7 @@ public:
 
     // Regions are populated based on reactor parameters
     unsigned int regions_;  // calculated total number of regions
+    unsigned int batches;
     float core_mass_;       // Total mass of all fuel in [kg]
     std::vector<TypeInfo> type;  // fuel types, such as UO2 and MOX
 
