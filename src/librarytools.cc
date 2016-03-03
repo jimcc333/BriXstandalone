@@ -277,10 +277,12 @@ void CriticalityBurn(ReactorXInfo &core) {
     float kcore_prev;
     float abs_flux = core.base_flux_;
     unsigned const int batches = core.batches;
+    int iter = 0;
 
-    core.base_flux_ = AbsFluxCalc(core, abs_flux, batches);
+    //core.base_flux_ = AbsFluxCalc(core, abs_flux, batches);
 
     while(kcore > 1) {
+        iter++;
         kcore_prev = kcore; // Save previous k for final interpolation
         //FluxCalc(core); // Update relative flux of regions
         EqPowPhi(core);
@@ -293,7 +295,7 @@ void CriticalityBurn(ReactorXInfo &core) {
         // Calculate DA
         //    DACalc(core);
 
-        abs_flux = AbsFluxCalc(core, abs_flux, batches);
+        //abs_flux = AbsFluxCalc(core, abs_flux, batches);
         core.base_flux_ = abs_flux;
         //std::cout << "Absolute flux: " << abs_flux << " k: " << kcore << std::endl;
 
@@ -313,6 +315,7 @@ void CriticalityBurn(ReactorXInfo &core) {
     // Update base_flux_ for next time
     core.base_flux_ = abs_flux;
 
+    //cout << "burn iterations: " << iter << endl;
     // Find the discharge fluences
     for(int type_i = 0; type_i < core.type.size(); type_i++) {
         for(int batch_i = 0; batch_i < core.type[type_i].batch.size(); batch_i++) {
@@ -433,8 +436,8 @@ void EqPowPhi(ReactorXInfo &core) {
 
     //cout << "EqPow fluxes: " << endl;
     for(int unsigned i = 0; i < N; i++) {
-        //cout << "               " << core.type[0].batch[i].rflux_ << endl;
-    }
+        //cout << "   " << core.type[0].batch[i].rflux_;
+    } //cout << endl;
 
 }
 /*

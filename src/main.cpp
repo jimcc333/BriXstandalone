@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
 
     // Generate necessary libraries and path strings
     LibInfo lwrlib, moxlib;
-    string lwrpath = "libs/E5_50", moxpath = "libs/PWRMOX";
+    string lwrpath = "libs/standLWR", moxpath = "libs/PWRMOX";
 
     // Populate the libraries
     LibraryReader("lwrlib", lwrpath, lwrlib);
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     lwrtype.batch.assign(4, regionlwr);
 
     TypeInfo moxtype;
-    moxtype.mass = 84; // watchout
+    moxtype.mass = 84;
 
     RegionInfo regionmox;
     regionmox.fractions[922350] = 0.00654120;
@@ -67,14 +67,14 @@ int main(int argc, char* argv[]) {
 
     ReactorXInfo reactor;
     reactor.type.push_back(lwrtype);
-    reactor.type.push_back(lwrtype);
-    reactor.pnl = 0.8421095;
+    reactor.type.push_back(moxtype);
+    reactor.pnl = 1;
     reactor.thermal_pow_ = 41;
     reactor.core_mass_ = lwrtype.mass + moxtype.mass;
     reactor.abs_flux_tol_ = 0.01;
-    reactor.base_flux_ = 3E18;
+    reactor.base_flux_ = 3E19;
     reactor.DA_mode_ = 0;
-    reactor.fluence_timestep_ = 50;
+    reactor.fluence_timestep_ = 30;
     reactor.flux_mode_ = 1;
     reactor.SS_tol_ = 0.001;
     reactor.batches = 0;
@@ -86,7 +86,17 @@ int main(int argc, char* argv[]) {
 
 
     /// Run steady state calculations
-    SSCalc(reactor);
+    float burnup;
+    float target = 60;
+    float pnl_prev = reactor.pnl;
+    float pnl = reactor.pnl;
+    cout << "  :" << SSCalc(reactor) << endl;
+
+    while(SSCalc(reactor) > target) {
+        cout << "  " << SSCalc(reactor) << endl;
+        reactor.pnl -= 0.001;
+    }
+    cout << "Final pnl: " << reactor.pnl << endl;
 
 
     cout << " UO2 burnup: " << reactor.type[0].batch[0].CalcBU() << endl;
@@ -137,9 +147,9 @@ float SSCalc(ReactorXInfo &reactor) {
     float burnup = 5;
     int iter = 0;
 
-    while(abs(bu_prev - burnup)/burnup > 0.01) {
+    while(abs(bu_prev - burnup)/burnup > 0.004) {
         iter++;
-        if(iter > 20) {
+        if(iter > 40) {
             cout << "!Too many iterations for SS calc!" << endl;
             return burnup;
         }
@@ -162,7 +172,7 @@ float SSCalc(ReactorXInfo &reactor) {
         burnup = reactor.AssemblyBU(3);
 
     }
-    //cout << "SS burnup found after " << iter+1 << " iterations" << endl;
+    cout << "SS burnup found after " << iter+1 << " iterations" << endl;
 
     return burnup;
 }
