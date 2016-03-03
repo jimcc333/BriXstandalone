@@ -27,6 +27,14 @@ public:
     std::vector<Daughter> iso_vector;
 
     void Print(int times = 5);
+    void Clear() {
+        fluence.clear();
+        neutron_dest.clear();
+        neutron_prod.clear();
+        BU.clear();
+        fission_products.clear();
+        iso_vector.clear();
+    }
 };
 
 struct nonActinide {

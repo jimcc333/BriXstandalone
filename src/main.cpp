@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
 
     // Generate necessary libraries and path strings
     LibInfo lwrlib, moxlib;
-    string lwrpath = "libs/standLWR", moxpath = "libs/PWRMOX";
+    string lwrpath = "libs/E5_50", moxpath = "libs/PWRMOX";
 
     // Populate the libraries
     LibraryReader("lwrlib", lwrpath, lwrlib);
@@ -43,8 +43,9 @@ int main(int argc, char* argv[]) {
     lwrtype.mass = 180;
 
     RegionInfo regionlwr;
-    regionlwr.fractions[922350] = 0.0530;
-    regionlwr.fractions[922380] = 0.9470;
+    float enrichment = 0.0530;
+    regionlwr.fractions[922350] = enrichment;
+    regionlwr.fractions[922380] = 1-enrichment;
     regionlwr.BuildIso(lwrlib);
 
     lwrtype.batch.assign(4, regionlwr);
@@ -60,21 +61,21 @@ int main(int argc, char* argv[]) {
     regionmox.fractions[942400] = 0.02072000;
     regionmox.fractions[942410] = 0.00592000;
     regionmox.fractions[942420] = 0.00584000;
-    regionmox.fractions[952440] = 0.00056000;
-    regionmox.BuildIso(lwrlib);
+    regionmox.fractions[952410] = 0.00056000;
+    regionmox.BuildIso(moxlib);
 
     moxtype.batch.assign(4, regionmox);
 
     ReactorXInfo reactor;
     reactor.type.push_back(lwrtype);
     reactor.type.push_back(moxtype);
-    reactor.pnl = 1;
-    reactor.thermal_pow_ = 41;
+    reactor.pnl = 0.95;
+    reactor.thermal_pow_ = 401;
     reactor.core_mass_ = lwrtype.mass + moxtype.mass;
     reactor.abs_flux_tol_ = 0.01;
     reactor.base_flux_ = 3E19;
     reactor.DA_mode_ = 0;
-    reactor.fluence_timestep_ = 30;
+    reactor.fluence_timestep_ = 50;
     reactor.flux_mode_ = 1;
     reactor.SS_tol_ = 0.001;
     reactor.batches = 0;
@@ -83,21 +84,85 @@ int main(int argc, char* argv[]) {
             reactor.batches++;
         }
     }
+    RegionInfo nextmox;
 
 
     /// Run steady state calculations
-    float burnup;
+    // Run 1
     float target = 60;
-    float pnl_prev = reactor.pnl;
-    float pnl = reactor.pnl;
-    cout << "  :" << SSCalc(reactor) << endl;
+
 
     while(SSCalc(reactor) > target) {
-        cout << "  " << SSCalc(reactor) << endl;
         reactor.pnl -= 0.001;
     }
-    cout << "Final pnl: " << reactor.pnl << endl;
+    cout << "Final pnl: " << reactor.pnl << " SS BU:" << SSCalc(reactor) << endl;
 
+
+    for(int i = 0; i < 6; i++) {
+        // Update compositions
+        reactor.type[0].batch[0].UpdateComp();
+        reactor.type[1].batch[0].UpdateComp();
+
+        float total = reactor.type[1].batch[0].comp["U235"] + reactor.type[1].batch[0].comp["U238"]  + reactor.type[1].batch[0].comp["PU238"] +
+        reactor.type[1].batch[0].comp["PU239"] + reactor.type[1].batch[0].comp["PU240"] + reactor.type[1].batch[0].comp["PU241"] +
+        reactor.type[1].batch[0].comp["PU242"] + reactor.type[1].batch[0].comp["AM241"];
+
+        cout << "total:" << total << endl;
+
+        nextmox.fractions[922350] = reactor.type[1].batch[0].comp["U235"] + (1-total)*regionmox.fractions[922350];
+        nextmox.fractions[922380] = reactor.type[1].batch[0].comp["U238"] + (1-total)*regionmox.fractions[922380];
+        nextmox.fractions[942380] = reactor.type[1].batch[0].comp["PU238"] + (1-total)*regionmox.fractions[942380];
+        nextmox.fractions[942390] = reactor.type[1].batch[0].comp["PU239"] + (1-total)*regionmox.fractions[942390];
+        nextmox.fractions[942400] = reactor.type[1].batch[0].comp["PU240"] + (1-total)*regionmox.fractions[942400];
+        nextmox.fractions[942410] = reactor.type[1].batch[0].comp["PU241"] + (1-total)*regionmox.fractions[942410];
+        nextmox.fractions[942420] = reactor.type[1].batch[0].comp["PU242"] + (1-total)*regionmox.fractions[942420];
+        nextmox.fractions[952410] = reactor.type[1].batch[0].comp["AM241"] + (1-total)*regionmox.fractions[952410];
+
+        nextmox.iso.Clear();
+        nextmox.BuildIso(moxlib);
+
+        reactor.type[1].batch[0] = nextmox;
+        reactor.type[1].batch[1] = nextmox;
+        reactor.type[1].batch[2] = nextmox;
+        reactor.type[1].batch[3] = nextmox;
+
+        float newtot = nextmox.fractions[922350] + nextmox.fractions[922380] + nextmox.fractions[942380] + nextmox.fractions[942390]
+        + nextmox.fractions[942400]+ nextmox.fractions[942410] + nextmox.fractions[942420]+    nextmox.fractions[952410];
+
+        cout << "new total: " << newtot << endl << endl;
+        /*
+        cout << regionmox.fractions[922350] << "  " << nextmox.fractions[922350] << endl;
+        cout << regionmox.fractions[922380] << "  " << nextmox.fractions[922380] << endl;
+        cout << regionmox.fractions[942380] << "  " << nextmox.fractions[942380] << endl;
+        cout << regionmox.fractions[942390] << "  " << nextmox.fractions[942390] << endl;
+        cout << regionmox.fractions[942400] << "  " << nextmox.fractions[942400] << endl;
+        cout << regionmox.fractions[942410] << "  " << nextmox.fractions[942410] << endl;
+        cout << regionmox.fractions[942420] << "  " << nextmox.fractions[942420] << endl;
+        cout << regionmox.fractions[952410] << "  " << nextmox.fractions[952410] << endl;*/
+
+        while(SSCalc(reactor) < target) {
+            enrichment += 0.0001;
+
+            regionlwr.iso.Clear();
+            regionlwr.fractions[922350] = enrichment;
+            regionlwr.fractions[922380] = 1-enrichment;
+
+            regionlwr.BuildIso(lwrlib);
+
+            reactor.type[0].batch[0] = regionlwr;
+            reactor.type[0].batch[1] = regionlwr;
+            reactor.type[0].batch[2] = regionlwr;
+            reactor.type[0].batch[3] = regionlwr;
+        }
+
+        cout << "Cycle " << i+2 << " enrichment: " << enrichment << endl;
+
+        cout << nextmox.fractions[942380] << endl;
+        cout << nextmox.fractions[942390] << endl;
+        cout << nextmox.fractions[942400] << endl;
+        cout << nextmox.fractions[942410] << endl;
+        cout << nextmox.fractions[942420] << endl;
+    }
 
     cout << " UO2 burnup: " << reactor.type[0].batch[0].CalcBU() << endl;
     cout << " MOX burnup: " << reactor.type[1].batch[0].CalcBU() << endl;
@@ -112,6 +177,9 @@ int main(int argc, char* argv[]) {
     reactor.type[0].batch[0].UpdateComp();
     reactor.type[1].batch[0].UpdateComp();
 
+
+
+/*
     cout << "UO2 composition: " << endl;
     cout << " U234  " << reactor.type[0].batch[0].comp["U234"] << endl;
     cout << " U235  " << reactor.type[0].batch[0].comp["U235"] << endl;
@@ -134,27 +202,27 @@ int main(int argc, char* argv[]) {
     cout << " PU240 " << reactor.type[1].batch[0].comp["PU240"] << endl;
     cout << " PU241 " << reactor.type[1].batch[0].comp["PU241"] << endl;
     cout << " PU242 " << reactor.type[1].batch[0].comp["PU242"] << endl;
-    cout << " CS137 " << reactor.type[1].batch[0].comp["CS137"] << endl;
+    cout << " CS137 " << reactor.type[1].batch[0].comp["CS137"] << endl;*/
     cout << "--Simulation reached the end--" << endl;
     return 0;
 }
 
 
 float SSCalc(ReactorXInfo &reactor) {
-    /// uses the burnup of the last assembly for this calculation!
+    /// uses the burnup of the oldest assembly for this calculation!
     // all fuel isos are correct when this is called
-    float bu_prev = reactor.AssemblyBU(3);
+    float bu_prev = reactor.AssemblyBU(0);
     float burnup = 5;
     int iter = 0;
 
     while(abs(bu_prev - burnup)/burnup > 0.004) {
         iter++;
-        if(iter > 40) {
+        if(iter > 60) {
             cout << "!Too many iterations for SS calc!" << endl;
             return burnup;
         }
 
-        bu_prev = reactor.AssemblyBU(3);
+        bu_prev = reactor.AssemblyBU(0);
 
         // New cycle
         reactor.type[0].batch[0].fluence_ = reactor.type[0].batch[1].fluence_;
@@ -169,10 +237,12 @@ float SSCalc(ReactorXInfo &reactor) {
 
         // Burn the fuel (update fluences)
         CriticalityBurn(reactor);
-        burnup = reactor.AssemblyBU(3);
+        burnup = reactor.AssemblyBU(0);
 
     }
-    cout << "SS burnup found after " << iter+1 << " iterations" << endl;
+    if(iter < 4) {
+        cout << "  ----Warning! SS burnup found after " << iter+1 << " iterations" << endl;
+    }
 
     return burnup;
 }

@@ -289,14 +289,14 @@ void CriticalityBurn(ReactorXInfo &core) {
 
         for(int i = 0; i < core.type[0].batch.size(); i++) {
             ///TODO this will change!!! just to see if it works, for now
-            core.type[1].batch[i].rflux_ = core.type[0].batch[i].rflux_ * 0.95;
+            core.type[1].batch[i].rflux_ = core.type[0].batch[i].rflux_ * 0.9970;
         }
 
         // Calculate DA
         //    DACalc(core);
 
         //abs_flux = AbsFluxCalc(core, abs_flux, batches);
-        core.base_flux_ = abs_flux;
+        //core.base_flux_ = abs_flux;
         //std::cout << "Absolute flux: " << abs_flux << " k: " << kcore << std::endl;
 
         // Update fluences
