@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
 
     // Generate necessary libraries and path strings
     LibInfo lwrlib, moxlib;
-    string lwrpath = "libs/E5_50", moxpath = "libs/PWRMOX";
+    string lwrpath = "libs/extLWR", moxpath = "libs/PWRMOX";
 
     // Populate the libraries
     LibraryReader("lwrlib", lwrpath, lwrlib);
@@ -96,9 +96,20 @@ int main(int argc, char* argv[]) {
         reactor.pnl -= 0.001;
     }
     cout << "Final pnl: " << reactor.pnl << " SS BU:" << SSCalc(reactor) << endl;
+reactor.type[0].batch[0].UpdateComp();
+reactor.type[1].batch[0].UpdateComp();
+    cout << " U234  " << 84*reactor.type[1].batch[0].comp["U234"] + 180*reactor.type[0].batch[0].comp["U234"] << endl;
+    cout << " U235  " << 84*reactor.type[1].batch[0].comp["U235"] + 180*reactor.type[0].batch[0].comp["U235"] << endl;
+    cout << " U236  " << 84*reactor.type[1].batch[0].comp["U236"] + 180*reactor.type[0].batch[0].comp["U236"] << endl;
+    cout << " U238  " << 84*reactor.type[1].batch[0].comp["U238"] + 180*reactor.type[0].batch[0].comp["U238"] << endl;
+    cout << " PU238 " << 84*reactor.type[1].batch[0].comp["PU238"] + 180*reactor.type[0].batch[0].comp["PU238"] << endl;
+    cout << " PU239 " << 84*reactor.type[1].batch[0].comp["PU239"] + 180*reactor.type[0].batch[0].comp["PU239"] << endl;
+    cout << " PU240 " << 84*reactor.type[1].batch[0].comp["PU240"] + 180*reactor.type[0].batch[0].comp["PU240"] << endl;
+    cout << " PU241 " << 84*reactor.type[1].batch[0].comp["PU241"] + 180*reactor.type[0].batch[0].comp["PU241"] << endl;
+    cout << " PU242 " << 84*reactor.type[1].batch[0].comp["PU242"] + 180*reactor.type[0].batch[0].comp["PU242"] << endl;
+    //cout << " CS137 " << reactor.type[1].batch[0].comp["CS137"] << endl;
 
-
-    for(int i = 0; i < 6; i++) {
+    for(int i = 0; i < 0; i++) {
         // Update compositions
         reactor.type[0].batch[0].UpdateComp();
         reactor.type[1].batch[0].UpdateComp();

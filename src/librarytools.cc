@@ -289,7 +289,7 @@ void CriticalityBurn(ReactorXInfo &core) {
 
         for(int i = 0; i < core.type[0].batch.size(); i++) {
             ///TODO this will change!!! just to see if it works, for now
-            core.type[1].batch[i].rflux_ = core.type[0].batch[i].rflux_ * 0.9970;
+            core.type[1].batch[i].rflux_ = core.type[0].batch[i].rflux_ * 0.9;
         }
 
         // Calculate DA
