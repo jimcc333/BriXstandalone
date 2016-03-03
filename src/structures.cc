@@ -147,8 +147,13 @@ void RegionInfo::UpdateComp() {
     const double slope = (fluence_ - iso.fluence[ii-1]) / (iso.fluence[ii] - iso.fluence[ii-1]);
 
     for(int iso_i = 0; iso_i < iso.iso_vector.size(); iso_i++) {
-        comp[iso.iso_vector[iso_i].string_name] = (iso.iso_vector[iso_i].mass[ii-1] +
-                (iso.iso_vector[iso_i].mass[ii] - iso.iso_vector[iso_i].mass[ii-1]) * slope) / 1000;
+        if(slope <= 0) {
+            cout << "if";
+            comp[iso.iso_vector[iso_i].string_name] = iso.iso_vector[iso_i].mass[ii-1];
+        } else {
+            comp[iso.iso_vector[iso_i].string_name] = (iso.iso_vector[iso_i].mass[ii-1] +
+                    (iso.iso_vector[iso_i].mass[ii] - iso.iso_vector[iso_i].mass[ii-1]) * slope) / 1000;
+        }
     }
 }
 

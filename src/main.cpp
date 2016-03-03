@@ -21,6 +21,7 @@ Assumptions:
 
 using namespace std;
 
+float SSCalc(ReactorXInfo &reactor);
 void LWRsolution(ReactorXInfo &reactor);
 
 int main(int argc, char* argv[]) {
@@ -31,7 +32,7 @@ int main(int argc, char* argv[]) {
 
     // Generate necessary libraries and path strings
     LibInfo lwrlib, moxlib;
-    string lwrpath = "libs/extLWR", moxpath = "libs/PWRMOX";
+    string lwrpath = "libs/E5_50", moxpath = "libs/PWRMOX";
 
     // Populate the libraries
     LibraryReader("lwrlib", lwrpath, lwrlib);
@@ -67,7 +68,7 @@ int main(int argc, char* argv[]) {
     ReactorXInfo reactor;
     reactor.type.push_back(lwrtype);
     reactor.type.push_back(lwrtype);
-    reactor.pnl = 0.8215;
+    reactor.pnl = 0.8421095;
     reactor.thermal_pow_ = 41;
     reactor.core_mass_ = lwrtype.mass + moxtype.mass;
     reactor.abs_flux_tol_ = 0.01;
@@ -85,37 +86,7 @@ int main(int argc, char* argv[]) {
 
 
     /// Run steady state calculations
-/*
-    for(int cycle = 0; cycle < 3; cycle++) {
-        reactor.PrintFluences();
-        CriticalityBurn(reactor);
-        //reactor.PrintFluences();
-        for(int type_i = 0; type_i < reactor.type.size(); type_i++) {
-            for(int batch_i = 0; batch_i < reactor.type[type_i].batch.size() - 1; batch_i++) {
-                reactor.type[type_i].batch[batch_i].fluence_ = reactor.type[type_i].batch[batch_i+1].fluence_;
-            }
-            reactor.type[type_i].batch.back().fluence_ = 0;
-        }
-    }
-*/
-
-    reactor.type[1].batch[3] = regionmox;
-    reactor.type[1].mass = 84;
-
-    for(int cycle = 0; cycle < 4; cycle++) {
-        cout << "BURN" << endl;
-        CriticalityBurn(reactor);
-
-        reactor.type[0].batch[0].fluence_ = reactor.type[0].batch[1].fluence_;
-        reactor.type[0].batch[1].fluence_ = reactor.type[0].batch[2].fluence_;
-        reactor.type[0].batch[2].fluence_ = reactor.type[0].batch[3].fluence_;
-        reactor.type[0].batch[3].fluence_ = 0;
-
-        reactor.type[1].batch[0] = reactor.type[1].batch[1];
-        reactor.type[1].batch[1] = reactor.type[1].batch[2];
-        reactor.type[1].batch[2] = reactor.type[1].batch[3];
-        reactor.type[1].batch[3] = regionmox;
-    }
+    SSCalc(reactor);
 
 
     cout << " UO2 burnup: " << reactor.type[0].batch[0].CalcBU() << endl;
@@ -158,6 +129,43 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+
+float SSCalc(ReactorXInfo &reactor) {
+    /// uses the burnup of the last assembly for this calculation!
+    // all fuel isos are correct when this is called
+    float bu_prev = reactor.AssemblyBU(3);
+    float burnup = 5;
+    int iter = 0;
+
+    while(abs(bu_prev - burnup)/burnup > 0.01) {
+        iter++;
+        if(iter > 20) {
+            cout << "!Too many iterations for SS calc!" << endl;
+            return burnup;
+        }
+
+        bu_prev = reactor.AssemblyBU(3);
+
+        // New cycle
+        reactor.type[0].batch[0].fluence_ = reactor.type[0].batch[1].fluence_;
+        reactor.type[0].batch[1].fluence_ = reactor.type[0].batch[2].fluence_;
+        reactor.type[0].batch[2].fluence_ = reactor.type[0].batch[3].fluence_;
+        reactor.type[0].batch[3].fluence_ = 0;
+
+        reactor.type[1].batch[0].fluence_ = reactor.type[1].batch[1].fluence_;
+        reactor.type[1].batch[1].fluence_ = reactor.type[1].batch[2].fluence_;
+        reactor.type[1].batch[2].fluence_ = reactor.type[1].batch[3].fluence_;
+        reactor.type[1].batch[3].fluence_ = 0;
+
+        // Burn the fuel (update fluences)
+        CriticalityBurn(reactor);
+        burnup = reactor.AssemblyBU(3);
+
+    }
+    //cout << "SS burnup found after " << iter+1 << " iterations" << endl;
+
+    return burnup;
+}
 
 
 void LWRsolution(ReactorXInfo &reactor) {
